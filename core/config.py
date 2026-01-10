@@ -2,7 +2,7 @@
 
 # ROS TOPICS
 # Input topics (subscribed)
-CAMERA_TOPIC = "/jetbot_camera/raw"  # sensor_msgs/Image
+CAMERA_TOPIC = "/csi_cam_0/image_raw"
 JOY_TOPIC = "/joy"                    # sensor_msgs/Joy
 LIDAR_TOPIC = "/scan"                 # sensor_msgs/LaserScan
 IMU_TOPIC = "/imu/data"               # sensor_msgs/Imu

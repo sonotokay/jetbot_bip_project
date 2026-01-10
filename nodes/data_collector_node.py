@@ -7,7 +7,8 @@ Collects training data and serves live camera feed
 import rospy
 import cv2
 import numpy as np
-from sensor_msgs.msg import Joy, Imu
+from sensor_msgs.msg import Image, Joy, Imu
+from cv_bridge import CvBridge
 import os
 import json
 from datetime import datetime
@@ -17,7 +18,7 @@ from flask import Flask, Response
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.config import (
-    JOY_TOPIC, IMU_TOPIC, DATA_DIR, IMAGE_WIDTH, IMAGE_HEIGHT,
+    CAMERA_TOPIC, JOY_TOPIC, IMU_TOPIC, DATA_DIR, IMAGE_WIDTH, IMAGE_HEIGHT,
     JOY_STEERING_AXIS, JOY_THROTTLE_AXIS, JOY_DEADZONE,
     DATA_COLLECTION_RATE
 )
@@ -37,15 +38,9 @@ class DataCollectorNode:
         
         os.makedirs(DATA_DIR, exist_ok=True)
         
-        self.camera = cv2.VideoCapture(0)
-        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-        
-        if not self.camera.isOpened():
-            rospy.logerr("Failed to open camera")
-            sys.exit(1)
-        
+        self.bridge = CvBridge()
         self.current_frame = None
+        self.latest_image = None
         self.frame_lock = threading.Lock()
         
         self.latest_joy = None
@@ -53,6 +48,9 @@ class DataCollectorNode:
         self.metadata = []
         self.frame_count = 0
         
+        self.image_sub = rospy.Subscriber(
+            CAMERA_TOPIC, Image, self.image_callback, queue_size=1
+        )
         self.joy_sub = rospy.Subscriber(
             JOY_TOPIC, Joy, self.joy_callback, queue_size=1
         )
@@ -63,7 +61,7 @@ class DataCollectorNode:
         self.flask_thread = threading.Thread(target=self.start_flask, daemon=True)
         self.flask_thread.start()
         
-        rospy.loginfo("Data Collector started (OpenCV camera)")
+        rospy.loginfo("Data Collector started")
         rospy.loginfo(f"Saving to: {DATA_DIR}")
         rospy.loginfo("Web viewer: http://JETBOT_IP:5000")
     
@@ -79,6 +77,15 @@ class DataCollectorNode:
             return 0.0
         return value
     
+    def image_callback(self, msg):
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            with self.frame_lock:
+                self.current_frame = cv_image.copy()
+            self.latest_image = cv_image
+        except Exception as e:
+            rospy.logerr(f"Image callback error: {e}")
+    
     def joy_callback(self, msg):
         self.latest_joy = msg
     
@@ -86,13 +93,9 @@ class DataCollectorNode:
         self.latest_imu = msg
     
     def collect_sample(self):
-        ret, frame = self.camera.read()
-        if not ret:
-            rospy.logwarn_throttle(5, "Failed to read from camera")
+        if self.latest_image is None:
+            rospy.logwarn_throttle(5, "No image received")
             return
-        
-        with self.frame_lock:
-            self.current_frame = frame.copy()
         
         if self.latest_joy is None:
             rospy.logwarn_throttle(5, "No joystick data received")
@@ -113,7 +116,7 @@ class DataCollectorNode:
         if self.latest_imu is not None:
             omega = self.latest_imu.angular_velocity.z
         
-        image = cv2.resize(frame, (IMAGE_WIDTH, IMAGE_HEIGHT))
+        image = cv2.resize(self.latest_image, (IMAGE_WIDTH, IMAGE_HEIGHT))
         
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         image_filename = f"img_{timestamp}.jpg"
@@ -150,7 +153,6 @@ class DataCollectorNode:
         except rospy.ROSInterruptException:
             pass
         finally:
-            self.camera.release()
             self.save_metadata()
     
     def save_metadata(self):
@@ -178,7 +180,7 @@ def index():
     <body>
         <div class="container">
             <h1>JetBot Data Collection</h1>
-            <div class="info">Camera: 1280x720 | Saved: 224x224</div>
+            <div class="info">Camera: 640x480 | Saved: 224x224</div>
             <img src="/video">
         </div>
     </body>

@@ -172,9 +172,9 @@ def main():
     
     # Dataloaders
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
-                             shuffle=True, num_workers=2)
+                            shuffle=True, num_workers=2)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE,
-                           shuffle=False, num_workers=2)
+                            shuffle=False, num_workers=2)
     
     # Model
     model = get_model(lightweight=USE_LIGHTWEIGHT_MODEL).to(device)
@@ -213,13 +213,13 @@ def main():
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             torch.save(model.state_dict(),
-                      os.path.join(MODEL_SAVE_PATH, 'best_model.pth'))
-            print(f"✓ Best model saved")
+                        os.path.join(MODEL_SAVE_PATH, 'best_model.pth'))
+            print(f"Best model saved")
         
         # Checkpoint
         if (epoch + 1) % 10 == 0:
             torch.save(model.state_dict(),
-                      os.path.join(MODEL_SAVE_PATH, f'checkpoint_{epoch+1}.pth'))
+                        os.path.join(MODEL_SAVE_PATH, f'checkpoint_{epoch+1}.pth'))
         
         print()
     
@@ -230,7 +230,7 @@ def main():
     
     # Save final
     torch.save(model.state_dict(),
-              os.path.join(MODEL_SAVE_PATH, 'final_model.pth'))
+                os.path.join(MODEL_SAVE_PATH, 'final_model.pth'))
     
     # Plot
     plot_history(train_losses, val_losses)
