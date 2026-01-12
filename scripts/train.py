@@ -172,9 +172,9 @@ def main():
     
     # Dataloaders
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
-                            shuffle=True, num_workers=2)
+                            shuffle=True, num_workers=0)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE,
-                            shuffle=False, num_workers=2)
+                            shuffle=False, num_workers=0)
     
     # Model
     model = get_model(lightweight=USE_LIGHTWEIGHT_MODEL).to(device)

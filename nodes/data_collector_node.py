@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 """
-Data Collection ROS Node with Live Web Stream
-Collects training data and serves live camera feed
+Data Collection ROS Node
+Collects training data (no web viewer - use web_video_server instead)
 """
 
 import rospy
 import cv2
 import numpy as np
 from sensor_msgs.msg import Image, Joy, Imu
-from cv_bridge import CvBridge
 import os
 import json
 from datetime import datetime
 import sys
-import threading
-from flask import Flask, Response
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.config import (
@@ -23,26 +20,16 @@ from core.config import (
     DATA_COLLECTION_RATE
 )
 
-app = Flask(__name__)
-data_collector = None
-
 
 class DataCollectorNode:
-    """ROS node for collecting training data with live web preview"""
+    """ROS node for collecting training data"""
     
     def __init__(self):
-        global data_collector
-        data_collector = self
-        
         rospy.init_node('data_collector', anonymous=True)
         
         os.makedirs(DATA_DIR, exist_ok=True)
         
-        self.bridge = CvBridge()
-        self.current_frame = None
         self.latest_image = None
-        self.frame_lock = threading.Lock()
-        
         self.latest_joy = None
         self.latest_imu = None
         self.metadata = []
@@ -58,19 +45,9 @@ class DataCollectorNode:
             IMU_TOPIC, Imu, self.imu_callback, queue_size=1
         )
         
-        self.flask_thread = threading.Thread(target=self.start_flask, daemon=True)
-        self.flask_thread.start()
-        
         rospy.loginfo("Data Collector started")
         rospy.loginfo(f"Saving to: {DATA_DIR}")
-        rospy.loginfo("Web viewer: http://JETBOT_IP:5000")
-    
-    def start_flask(self):
-        app.run(host='0.0.0.0', port=5000, threaded=True, use_reloader=False)
-    
-    def get_current_frame(self):
-        with self.frame_lock:
-            return self.current_frame.copy() if self.current_frame is not None else None
+        rospy.loginfo("View camera at: http://JETBOT_IP:8080/stream_viewer?topic=/csi_cam_0/image_raw")
     
     def apply_deadzone(self, value):
         if abs(value) < JOY_DEADZONE:
@@ -78,13 +55,21 @@ class DataCollectorNode:
         return value
     
     def image_callback(self, msg):
+        """Convert ROS Image to numpy array without cv_bridge"""
         try:
-            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-            with self.frame_lock:
-                self.current_frame = cv_image.copy()
-            self.latest_image = cv_image
+            # Manual conversion: ROS Image -> numpy array
+            if msg.encoding == "bgr8":
+                img_array = np.frombuffer(msg.data, dtype=np.uint8)
+                img_array = img_array.reshape((msg.height, msg.width, 3))
+                self.latest_image = img_array
+            elif msg.encoding == "rgb8":
+                img_array = np.frombuffer(msg.data, dtype=np.uint8)
+                img_array = img_array.reshape((msg.height, msg.width, 3))
+                self.latest_image = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+            else:
+                rospy.logwarn_throttle(10, f"Unsupported encoding: {msg.encoding}")
         except Exception as e:
-            rospy.logerr(f"Image callback error: {e}")
+            rospy.logerr_throttle(10, f"Image callback error: {e}")
     
     def joy_callback(self, msg):
         self.latest_joy = msg
@@ -162,61 +147,6 @@ class DataCollectorNode:
         
         rospy.loginfo(f"Total frames: {self.frame_count}")
         rospy.loginfo(f"Saved to: {DATA_DIR}")
-
-
-@app.route('/')
-def index():
-    return '''
-    <html>
-    <head>
-        <title>JetBot Data Collection</title>
-        <style>
-            body { margin:0; background:#000; font-family: monospace; color: #0f0; }
-            .container { text-align: center; padding: 20px; }
-            img { max-width: 90%; height: auto; border: 2px solid #0f0; }
-            .info { margin: 20px; font-size: 18px; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>JetBot Data Collection</h1>
-            <div class="info">Camera: 640x480 | Saved: 224x224</div>
-            <img src="/video">
-        </div>
-    </body>
-    </html>
-    '''
-
-@app.route('/video')
-def video():
-    def generate():
-        while True:
-            if data_collector is None:
-                continue
-            
-            frame = data_collector.get_current_frame()
-            if frame is None:
-                continue
-            
-            frame = cv2.resize(frame, (640, 480))
-            
-            if data_collector.frame_count > 0:
-                cv2.putText(frame, f"Frames: {data_collector.frame_count}", 
-                            (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                
-                if data_collector.latest_joy and len(data_collector.latest_joy.axes) > JOY_STEERING_AXIS:
-                    steering = data_collector.apply_deadzone(data_collector.latest_joy.axes[JOY_STEERING_AXIS])
-                    cv2.putText(frame, f"Steering: {steering:+.2f}", 
-                                (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            
-            ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-            if not ret:
-                continue
-            
-            yield (b'--frame\r\n'
-                    b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-    
-    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 if __name__ == '__main__':

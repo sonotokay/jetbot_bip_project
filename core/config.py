@@ -19,7 +19,7 @@ IMAGE_CHANNELS = 3
 
 # DATA COLLECTION
 DATA_DIR = "./data/training"
-COLLECTION_RATE = 10  # Hz
+COLLECTION_RATE = 5  # Hz
 
 # Gamepad axis mapping
 JOY_STEERING_AXIS = 0   # Left stick horizontal
