@@ -1,10 +1,12 @@
 data
 
+#LATEX .gitignore
 
-
-
-
-
+latex-report/tech-report.aux
+latex-report/tech-report.log
+latex-report/tech-report.out
+latex-report/tech-report.pdf
+latex-report/tech-report.synctex.gz
 
 
 # Byte-compiled / optimized / DLL files
