@@ -1,0 +1,11 @@
+<launch>
+    <node pkg="jetbot_ros" type="filter.py" name="kalman_filter_node" output="screen" respawn="true">
+
+        <param name="input_topic" value="/imu" />
+        <param name="output_topic" value="/kalman_imu" />
+
+        <param name="default_gyro_var" value="0.005" />
+
+        <param name="default_accel_var" value="0.05" />
+    </node>
+</launch>
