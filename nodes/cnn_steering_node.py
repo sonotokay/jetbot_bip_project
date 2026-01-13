@@ -82,8 +82,9 @@ class CNNSteeringNode:
     def preprocess_image(self, cv_image):
         """Preprocess image - MUST MATCH TRAINING EXACTLY"""
         # SAME ORDER AS TRAINING:
-        # 1. BGR to RGB
-        image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+        # 1. Grayscale (color-agnostic)
+        image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
         
         # 2. Resize
         image = cv2.resize(image, (IMAGE_WIDTH, IMAGE_HEIGHT))

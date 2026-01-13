@@ -49,7 +49,8 @@ class SteeringDataset(Dataset):
         # Load image
         image_path = os.path.join(self.data_dir, sample['image'])
         image = cv2.imread(image_path)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
         image = cv2.resize(image, (IMAGE_WIDTH, IMAGE_HEIGHT))
         
         # Get label (steering or omega)

@@ -1,5 +1,7 @@
 data
-
+*.png
+*.pth
+*.json
 #LATEX .gitignore
 
 latex-report/tech-report.aux
