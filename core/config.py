@@ -15,11 +15,9 @@ SPEED_TOPIC = "/speed_multiplier"     # std_msgs/Float32
 # IMAGE SETTINGS
 IMAGE_WIDTH = 224
 IMAGE_HEIGHT = 224
-IMAGE_CHANNELS = 3
 
 # DATA COLLECTION
 DATA_DIR = "./data/training"
-COLLECTION_RATE = 5  # Hz
 
 # Gamepad axis mapping
 JOY_STEERING_AXIS = 0   # Left stick horizontal
@@ -32,20 +30,15 @@ LEARNING_RATE = 0.001
 NUM_EPOCHS = 50
 VAL_SPLIT = 0.2
 MODEL_SAVE_PATH = "./models/checkpoints"
-BEST_MODEL_PATH = "./models/checkpoints/best_model.pth"
 
 # ROBOT CONTROL
-# Base speeds
 BASE_SPEED = 0.25        # m/s forward velocity
-STEERING_GAIN = 0.2      # Differential steering gain
 MAX_ANGULAR_VEL = 2.0    # rad/s maximum rotation
-WHEELBASE = 0.1          # meters (distance between left and right wheels)
 
-# LIDAR SAFETY
-LIDAR_STOP_DISTANCE = 0.30      # meters - emergency stop
-LIDAR_SLOW_DISTANCE = 0.60      # meters - slow down
-LIDAR_NORMAL_DISTANCE = 1.00    # meters - full speed
-LIDAR_SECTOR_ANGLE = 30         # degrees - forward sector (±30°)
+# LiDAR Safety Parameters
+LIDAR_TOPIC = "/scan"
+LIDAR_MIN_DISTANCE = 0.3  # meters - emergency stop
+LIDAR_SAFE_DISTANCE = 0.5
 
 # Speed multipliers
 SPEED_STOP = 0.0
@@ -62,9 +55,9 @@ USE_LIGHTWEIGHT_MODEL = False  # True to use the lighter model
 
 # ROS NODE RATES
 DATA_COLLECTION_RATE = 10  # Hz
-CNN_INFERENCE_RATE = 20    # Hz
-SAFETY_CHECK_RATE = 20     # Hz
-MOTOR_CONTROL_RATE = 20    # Hz
+CNN_INFERENCE_RATE = 10    # Hz
+SAFETY_CHECK_RATE = 10     # Hz unused but keep for now
+MOTOR_CONTROL_RATE = 10    # Hz
 
 # LOGGING
 LOG_LEVEL = "INFO"  # DEBUG, INFO, WARN, ERROR

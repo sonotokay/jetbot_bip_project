@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Motor control -->
+  <include file="$(find jetbot_pro)/launch/jetbot.launch" />
+  
+  <!-- Camera -->
+  <include file="$(find jetbot_pro)/launch/csi_camera.launch" />
+  
+  <!-- Joystick -->
+  <node pkg="joy" type="joy_node" name="joy_node" output="screen">
+    <param name="dev" value="/dev/input/js0" />
+  </node>
+  
+  <!-- Teleop with scaled controls -->
+  <node pkg="teleop_twist_joy" type="teleop_node" name="teleop_twist_joy" output="screen">
+    <param name="scale_angular" value="3.0" />
+    <param name="scale_linear" value="0.5" />
+    <param name="enable_button" value="0" />
+  </node>
+</launch>

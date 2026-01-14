@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<launch>
+  <include file="$(find jetbot_pro)/launch/base.launch" />
+  <include file="$(find jetbot_pro)/launch/lidar.launch" />
+  
+  <!-- Use existing kalman launch if use_imu=true -->
+  <arg name="use_imu" default="true" />
+  <include file="$(env HOME)/jetbot_project/launch/kalman_filter.launch">
+    <arg name="use_imu" value="$(arg use_imu)" />
+  </include>  
+
+  <!-- Custom scripts - use full paths -->
+  <env name="PYTHONPATH" value="$(env HOME)/jetbot_project:$(env/PYTHONPATH)" />
+  
+  <node name="cnn_steering" pkg="jetbot_project" type="cnn_steering_node.py" 
+        output="screen" required="true" />
+  
+  <node name="lidar_avoidance" pkg="jetbot_project" type="lidar_backup_avoidance_node.py"
+        output="screen" required="true" />
+  
+  <node name="motor_fusion" pkg="jetbot_project" type="motor_fusion_node.py"
+        output="screen" required="true">
+    <param name="use_imu" value="$(arg use_imu)" />
+  </node>
+</launch>

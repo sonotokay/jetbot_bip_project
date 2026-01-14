@@ -7,109 +7,183 @@ Combines CNN steering with LiDAR safety
 """
 
 import rospy
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, Bool
 from geometry_msgs.msg import Twist
+from sensor_msgs.msg import Imu
+import math
 import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from core.config import (
-    STEERING_TOPIC, SPEED_TOPIC, CMD_VEL_TOPIC,
-    BASE_SPEED, STEERING_GAIN, MAX_ANGULAR_VEL,
-    WHEELBASE, PREDICT_ANGULAR_VELOCITY, MOTOR_CONTROL_RATE
-)
+from core.config import BASE_SPEED, MAX_ANGULAR_VEL
 
 
 class MotorFusionNode:
-    """ROS node for fusing steering and safety into motor commands"""
+    """Fuses vision steering with LiDAR override and IMU drift correction"""
     
     def __init__(self):
         rospy.init_node('motor_fusion', anonymous=True)
         
         # State
-        self.latest_steering = 0.0
-        self.latest_speed_multiplier = 1.0
+        self.vision_steering = 0.0
+        self.speed_multiplier = 1.0
+        self.lidar_override = False
+        self.lidar_cmd_vel = Twist()
         
-        # Publisher
-        self.cmd_vel_pub = rospy.Publisher(
-            CMD_VEL_TOPIC, Twist, queue_size=1
-        )
+        # IMU drift correction
+        self.use_imu_correction = rospy.get_param('~use_imu', False)
+        self.target_yaw = None
+        self.current_yaw = 0.0
+        self.drift_correction_gain = 0.1  # How aggressively to correct drift
         
         # Subscribers
-        self.steering_sub = rospy.Subscriber(
-            STEERING_TOPIC, Float32, self.steering_callback, queue_size=1
+        self.vision_sub = rospy.Subscriber(
+            '/steering_cmd', Float32, self.vision_callback, queue_size=1
         )
         self.speed_sub = rospy.Subscriber(
-            SPEED_TOPIC, Float32, self.speed_callback, queue_size=1
+            '/speed_multiplier', Float32, self.speed_callback, queue_size=1
+        )
+        self.lidar_override_sub = rospy.Subscriber(
+            '/lidar_override', Bool, self.lidar_override_callback, queue_size=1
+        )
+        self.lidar_cmd_sub = rospy.Subscriber(
+            '/lidar_cmd_vel', Twist, self.lidar_cmd_callback, queue_size=1
         )
         
-        # Stats
-        self.cmd_count = 0
+        if self.use_imu_correction:
+            self.imu_sub = rospy.Subscriber(
+                '/kalman_imu', Imu, self.imu_callback, queue_size=1
+            )
+        
+        self.cnn_ready = False
+        # Subscribe to CNN ready signal
+        self.cnn_ready_sub = rospy.Subscriber(
+            '/cnn_ready', Bool, self.cnn_ready_callback, queue_size=1
+        )
+        
+        # Publisher
+        self.cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
         
         rospy.loginfo("Motor Fusion Node started")
-        mode = "angular velocity" if PREDICT_ANGULAR_VELOCITY else "steering angle"
-        rospy.loginfo(f"Mode: {mode}")
+        rospy.loginfo(f"Base speed: {BASE_SPEED} m/s")
+        rospy.loginfo(f"IMU drift correction: {self.use_imu_correction}")
     
-    def steering_callback(self, msg):
-        """Callback for steering commands"""
-        self.latest_steering = msg.data
+    def cnn_ready_callback(self, msg):
+        if msg.data and not self.cnn_ready:
+            self.cnn_ready = True
+            rospy.loginfo("✓ CNN is ready! Motor fusion starting...")
+    
+    def vision_callback(self, msg):
+        self.vision_steering = msg.data
     
     def speed_callback(self, msg):
-        """Callback for speed multiplier"""
-        self.latest_speed_multiplier = msg.data
+        self.speed_multiplier = msg.data
     
-    def compute_cmd_vel(self):
-        """Compute Twist command from steering and speed"""
-        cmd = Twist()
+    def lidar_override_callback(self, msg):
+        self.lidar_override = msg.data
         
-        # Apply speed multiplier to base speed
-        linear_vel = BASE_SPEED * self.latest_speed_multiplier
-        
-        if PREDICT_ANGULAR_VELOCITY:
-            # Model predicts angular velocity directly (rad/s)
-            angular_vel = self.latest_steering
-            
-            # Clamp
-            angular_vel = max(-MAX_ANGULAR_VEL, min(MAX_ANGULAR_VEL, angular_vel))
-        
+        if self.lidar_override:
+            rospy.logwarn("LiDAR OVERRIDE ACTIVE")
+            # Reset target yaw when override starts
+            self.target_yaw = None
         else:
-            # Model predicts steering angle (-1 to 1)
-            # Convert to angular velocity
-            angular_vel = self.latest_steering * MAX_ANGULAR_VEL
+            rospy.loginfo("Vision control resumed")
+    
+    def lidar_cmd_callback(self, msg):
+        self.lidar_cmd_vel = msg
+    
+    def euler_from_quaternion(quat):
+        """Convert quaternion to euler angles (roll, pitch, yaw)"""
+        x, y, z, w = quat
         
-        # Set command
-        cmd.linear.x = linear_vel
-        cmd.angular.z = angular_vel
+        # Roll (x-axis rotation)
+        sinr_cosp = 2 * (w * x + y * z)
+        cosr_cosp = 1 - 2 * (x * x + y * y)
+        roll = math.atan2(sinr_cosp, cosr_cosp)
         
-        return cmd
+        # Pitch (y-axis rotation)
+        sinp = 2 * (w * y - z * x)
+        if abs(sinp) >= 1:
+            pitch = math.copysign(math.pi / 2, sinp)
+        else:
+            pitch = math.asin(sinp)
+        
+        # Yaw (z-axis rotation)
+        siny_cosp = 2 * (w * z + x * y)
+        cosy_cosp = 1 - 2 * (y * y + z * z)
+        yaw = math.atan2(siny_cosp, cosy_cosp)
+        
+        return roll, pitch, yaw
+    
+    def imu_callback(self, msg):
+        """Extract yaw from filtered IMU"""
+        quat = [
+            msg.orientation.x,
+            msg.orientation.y,
+            msg.orientation.z,
+            msg.orientation.w
+        ]
+        _, _, self.current_yaw = self.euler_from_quaternion(quat)
+        
+        # Set target yaw on first reading (or after override)
+        if self.target_yaw is None:
+            self.target_yaw = self.current_yaw
+    
+    def compute_drift_correction(self):
+        """Calculate steering correction based on yaw drift"""
+        if not self.use_imu_correction or self.target_yaw is None:
+            return 0.0
+        
+        # Calculate yaw error
+        yaw_error = self.target_yaw - self.current_yaw
+        
+        # Normalize to [-pi, pi]
+        while yaw_error > np.pi:
+            yaw_error -= 2 * np.pi
+        while yaw_error < -np.pi:
+            yaw_error += 2 * np.pi
+        
+        # Small correction proportional to error
+        correction = self.drift_correction_gain * yaw_error
+        correction = np.clip(correction, -0.2, 0.2)  # Limit correction
+        
+        if abs(yaw_error) > 0.1:  # 5.7 degrees
+            rospy.loginfo_throttle(2.0, 
+                f"Drift correction: {correction:+.2f} (error: {np.degrees(yaw_error):.1f}°)")
+        
+        return correction
     
     def run(self):
-        """Main control loop"""
-        rate = rospy.Rate(MOTOR_CONTROL_RATE)
-        
-        rospy.loginfo(f"Publishing cmd_vel at {MOTOR_CONTROL_RATE} Hz")
+        rate = rospy.Rate(20)  # 20 Hz
         
         while not rospy.is_shutdown():
-            # Compute and publish command
-            cmd = self.compute_cmd_vel()
+            if not self.cnn_ready:
+                # Stay stopped while waiting for CNN
+                cmd = Twist()
+                self.cmd_vel_pub.publish(cmd)
+                rate.sleep()
+                continue
+            
+            cmd = Twist()
+            
+            if self.lidar_override:
+                # LiDAR in control (backup/adjust sequence)
+                cmd = self.lidar_cmd_vel
+            else:
+                # Vision + IMU in control
+                drift_correction = self.compute_drift_correction()
+                steering = self.vision_steering + drift_correction
+                
+                cmd.linear.x = BASE_SPEED * self.speed_multiplier
+                cmd.angular.z = steering * MAX_ANGULAR_VEL
+            
             self.cmd_vel_pub.publish(cmd)
-            
-            self.cmd_count += 1
-            
-            # Log
-            if self.cmd_count % 100 == 0:
-                rospy.loginfo(
-                    f"Commands: {self.cmd_count} | "
-                    f"Linear: {cmd.linear.x:.2f} m/s | "
-                    f"Angular: {cmd.angular.z:+.2f} rad/s | "
-                    f"Speed mult: {self.latest_speed_multiplier:.1%}"
-                )
-            
             rate.sleep()
 
 
 if __name__ == '__main__':
     try:
+        import numpy as np
         node = MotorFusionNode()
         node.run()
     except rospy.ROSInterruptException:

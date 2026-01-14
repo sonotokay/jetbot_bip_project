@@ -1,7 +1,11 @@
 data
-
+*.png
+*.pth
+*.json
+.DS_Store
 #LATEX .gitignore
 
+latex-report/out/
 latex-report/tech-report.aux
 latex-report/tech-report.log
 latex-report/tech-report.out
