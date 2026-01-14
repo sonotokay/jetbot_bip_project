@@ -111,12 +111,6 @@ class CNNSteeringNode:
             rospy.logwarn_throttle(5, "No image received")
             return None
         
-        # First successful prediction = ready
-        if not self.ready:
-            self.ready = True
-            rospy.loginfo("CNN READY")
-            self.ready_pub.publish(Bool(data=True))
-        
         start_time = rospy.get_time()
         
         with torch.no_grad():
@@ -138,6 +132,12 @@ class CNNSteeringNode:
                 f"FPS: {fps:.1f} | "
                 f"Latest: {steering:+.3f}"
             )
+        
+        # First successful prediction = ready
+        if not self.ready:
+            self.ready = True
+            rospy.loginfo("CNN READY")
+            self.ready_pub.publish(Bool(data=True))
         
         return steering
     

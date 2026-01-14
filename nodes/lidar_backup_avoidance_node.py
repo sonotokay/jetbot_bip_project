@@ -110,7 +110,9 @@ class LidarBackupAvoidanceNode:
             return  # Don't process until CNN ready
         
         ranges = np.array(msg.ranges)
-        ranges = np.nan_to_num(ranges, nan=float('inf'))
+        ranges = np.where(np.isnan(ranges), float('inf'), ranges)
+        min_dist = np.min(ranges[np.isfinite(ranges)]) if np.any(np.isfinite(ranges)) else float('inf')
+        rospy.loginfo_throttle(2.0, f"LiDAR: min_distance={min_dist:.2f}m | ranges_count={len(ranges)}")
         
         has_obstacle, obstacle_side, min_distance = self.analyze_obstacle(
             ranges, msg.angle_min, msg.angle_increment

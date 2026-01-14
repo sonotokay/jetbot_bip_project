@@ -10,7 +10,7 @@ import rospy
 from std_msgs.msg import Float32, Bool
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Imu
-from tf.transformations import euler_from_quaternion
+import math
 import sys
 import os
 
@@ -92,6 +92,29 @@ class MotorFusionNode:
     def lidar_cmd_callback(self, msg):
         self.lidar_cmd_vel = msg
     
+    def euler_from_quaternion(quat):
+        """Convert quaternion to euler angles (roll, pitch, yaw)"""
+        x, y, z, w = quat
+        
+        # Roll (x-axis rotation)
+        sinr_cosp = 2 * (w * x + y * z)
+        cosr_cosp = 1 - 2 * (x * x + y * y)
+        roll = math.atan2(sinr_cosp, cosr_cosp)
+        
+        # Pitch (y-axis rotation)
+        sinp = 2 * (w * y - z * x)
+        if abs(sinp) >= 1:
+            pitch = math.copysign(math.pi / 2, sinp)
+        else:
+            pitch = math.asin(sinp)
+        
+        # Yaw (z-axis rotation)
+        siny_cosp = 2 * (w * z + x * y)
+        cosy_cosp = 1 - 2 * (y * y + z * z)
+        yaw = math.atan2(siny_cosp, cosy_cosp)
+        
+        return roll, pitch, yaw
+    
     def imu_callback(self, msg):
         """Extract yaw from filtered IMU"""
         quat = [
@@ -100,7 +123,7 @@ class MotorFusionNode:
             msg.orientation.z,
             msg.orientation.w
         ]
-        _, _, self.current_yaw = euler_from_quaternion(quat)
+        _, _, self.current_yaw = self.euler_from_quaternion(quat)
         
         # Set target yaw on first reading (or after override)
         if self.target_yaw is None:

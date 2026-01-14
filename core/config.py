@@ -32,17 +32,13 @@ VAL_SPLIT = 0.2
 MODEL_SAVE_PATH = "./models/checkpoints"
 
 # ROBOT CONTROL
-# Base speeds
 BASE_SPEED = 0.25        # m/s forward velocity
-STEERING_GAIN = 0.2      # Differential steering gain .unused but keep for now
 MAX_ANGULAR_VEL = 2.0    # rad/s maximum rotation
-WHEELBASE = 0.1          # meters (distance between left and right wheels) .unused but keep for now
 
-# LIDAR SAFETY
-LIDAR_STOP_DISTANCE = 0.30      # meters - emergency stop
-LIDAR_SLOW_DISTANCE = 0.60      # meters - slow down
-LIDAR_NORMAL_DISTANCE = 1.00    # meters - full speed
-LIDAR_SECTOR_ANGLE = 30         # degrees - forward sector (±30°)
+# LiDAR Safety Parameters
+LIDAR_TOPIC = "/scan"
+LIDAR_MIN_DISTANCE = 0.3  # meters - emergency stop
+LIDAR_SAFE_DISTANCE = 0.5
 
 # Speed multipliers
 SPEED_STOP = 0.0
