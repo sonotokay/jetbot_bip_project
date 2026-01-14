@@ -1,0 +1,18 @@
+<launch>
+  <arg name="use_imu" default="true" />
+
+  <node pkg="python3"
+        type="python3"
+        name="kalman_filter_node"
+        args="$(env HOME)/jetbot_project/scripts/filter.py"
+        output="screen"
+        respawn="true"
+        if="$(arg use_imu)">
+
+    <param name="input_topic" value="/imu" />
+    <param name="output_topic" value="/kalman_imu" />
+
+    <param name="default_gyro_var" value="0.005" />
+    <param name="default_accel_var" value="0.05" />
+  </node>
+</launch>

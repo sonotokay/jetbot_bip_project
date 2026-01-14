@@ -8,7 +8,7 @@ import rospy
 import torch
 import numpy as np
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, Bool
 import cv2
 import os
 import sys
@@ -16,7 +16,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.config import (
     CAMERA_TOPIC, STEERING_TOPIC, IMAGE_WIDTH, IMAGE_HEIGHT,
-    BEST_MODEL_PATH, USE_LIGHTWEIGHT_MODEL,
+    USE_LIGHTWEIGHT_MODEL,
     PREDICT_ANGULAR_VELOCITY, CNN_INFERENCE_RATE
 )
 from core.model import get_model
@@ -46,6 +46,14 @@ class CNNSteeringNode:
             sys.exit(1)
         
         self.model.eval()
+        
+        # Add ready publisher
+        self.ready_pub = rospy.Publisher('/cnn_ready', Bool, queue_size=1, latch=True)
+        
+        self.latest_image = None
+        self.ready = False
+    
+        rospy.loginfo("CNN node started, waiting for first image...")
         
         self.latest_image = None
         
@@ -102,6 +110,12 @@ class CNNSteeringNode:
         if self.latest_image is None:
             rospy.logwarn_throttle(5, "No image received")
             return None
+        
+        # First successful prediction = ready
+        if not self.ready:
+            self.ready = True
+            rospy.loginfo("CNN READY")
+            self.ready_pub.publish(Bool(data=True))
         
         start_time = rospy.get_time()
         
