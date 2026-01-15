@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-RUN pip install --no-cache-dir fastapi uvicorn[standard] ultralytics opencv-python-headless python-multipart
+RUN pip install --no-cache-dir fastapi uvicorn[standard] ultralytics opencv-python-headless python-multipart requests
 
 COPY server.py /app/server.py
 

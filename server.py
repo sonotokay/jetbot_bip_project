@@ -1,3 +1,7 @@
+import os
+import requests
+JETSON_ALARM_URL = os.environ.get("JETSON_ALARM_URL", "")  # TODO z.B. http://192.168.0.42:9000/alarm
+
 from fastapi import FastAPI, File, UploadFile
 import numpy as np
 import cv2
@@ -38,6 +42,18 @@ async def detect(file: UploadFile = File(...), conf: float = 0.35):
                     "conf": float(score),
                     "xyxy": [float(x1), float(y1), float(x2), float(y2)]
                 })
+
+    if JETSON_ALARM_URL:
+        person_found = any(d["class"] == "person" for d in detections)
+        if person_found:
+            try:
+                requests.post(
+                    JETSON_ALARM_URL,
+                    json={"alarm": True, "reason": "person detected", "source": "laptop-yolo"},
+                    timeout=0.2
+                )
+            except requests.RequestException:
+                pass
 
 
     return {"ok": True, "num_detections": len(detections), "detections": detections}

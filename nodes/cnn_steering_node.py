@@ -32,7 +32,7 @@ class CNNSteeringNode:
     """ROS node for CNN-based steering prediction"""
     
     def __init__(self):
-        self.laptop_url = "http://<LAPTOP_IP>:8000/detect?conf=0.35"
+        self.laptop_url = f"http://{LAPTOP_IP}:8000/detect?conf=0.35"
         self.last_send = 0.0
         self.send_hz = 5.0 # Send every 0.2 seconds
 
