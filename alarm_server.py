@@ -10,7 +10,7 @@ from pydantic import BaseModel
 app = FastAPI()
 
 # TODO Wave sound 
-ALARM_WAV = os.environ.get("ALARM_WAV", "/home/jetson/alarm.wav")
+ALARM_WAV = os.environ.get("ALARM_WAV", "/home/jetbot/alarm.wav")
 
 # Alarm cooldown in seconds
 COOLDOWN_SEC = float(os.environ.get("ALARM_COOLDOWN", "2.0"))
