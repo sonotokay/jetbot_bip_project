@@ -13,6 +13,9 @@ import cv2
 import os
 import sys
 
+import requests
+import time
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.config import (
     CAMERA_TOPIC, STEERING_TOPIC, IMAGE_WIDTH, IMAGE_HEIGHT,
@@ -29,6 +32,10 @@ class CNNSteeringNode:
     """ROS node for CNN-based steering prediction"""
     
     def __init__(self):
+        self.laptop_url = "http://<LAPTOP_IP>:8000/detect?conf=0.35"
+        self.last_send = 0.0
+        self.send_hz = 5.0 # Send every 0.2 seconds
+
         rospy.init_node('cnn_steering', anonymous=True)
         
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -82,8 +89,28 @@ class CNNSteeringNode:
                 img_array = np.frombuffer(msg.data, dtype=np.uint8)
                 img_array = img_array.reshape((msg.height, msg.width, 3))
                 self.latest_image = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+                
             else:
                 rospy.logwarn_throttle(10, f"Unsupported encoding: {msg.encoding}")
+
+            now = time.time()
+            if now - self.last_send < 1.0 / self.send_hz:
+                return
+            self.last_send = now
+
+            img = self.latest_image
+            # img_small = cv2.resize(img, (0, 0), fx=0.5, fy=0.5)
+            ok, enc = cv2.imencode(".jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+            if not ok:
+                return
+
+            files = {"file": ("frame.jpg", enc.tobytes(), "image/jpeg")}
+            try:
+                requests.post(self.laptop_url, files=files, timeout=0.5)
+            except requests.RequestException as e:
+                rospy.logwarn_throttle(2.0, f"YOLO request failed: {e}")
+
+
         except Exception as e:
             rospy.logerr_throttle(10, f"Image callback error: {e}")
     
