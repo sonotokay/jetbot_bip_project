@@ -1,8 +1,8 @@
 import os
 import requests
-from core.config import (JETSON_IP)
+# from core.config import (JETSON_IP)
 
-JETSON_ALARM_URL = os.environ.get("JETSON_ALARM_URL", JETSON_IP)  # TODO z.B. http://192.168.0.42:9000/alarm
+JETSON_ALARM_URL = os.environ.get("JETSON_ALARM_URL", "http://192.168.137.112:9000/alarm")  # TODO z.B. http://192.168.0.42:9000/alarm
 
 from fastapi import FastAPI, File, UploadFile
 import numpy as np
