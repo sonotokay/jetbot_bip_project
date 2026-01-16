@@ -124,6 +124,19 @@ class DataCollectorNode:
                 f"Steering: {steering:+.2f} | "
                 f"Omega: {omega:+.2f} rad/s"
             )
+        
+        if self.frame_count % 50 == 0:
+            self.save_metadata()
+            rospy.loginfo(
+                f"✓ AUTO-SAVED at {self.frame_count} frames | "
+                f"Steering: {steering:+.2f} | "
+                f"Omega: {omega:+.2f} rad/s"
+            )
+        elif self.frame_count % 10 == 0:
+            rospy.loginfo(
+                f"Collected {self.frame_count} frames | "
+                f"Steering: {steering:+.2f}"
+            )
     
     def run(self):
         rate = rospy.Rate(DATA_COLLECTION_RATE)

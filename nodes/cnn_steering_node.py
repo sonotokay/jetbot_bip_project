@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.config import (
     CAMERA_TOPIC, STEERING_TOPIC, IMAGE_WIDTH, IMAGE_HEIGHT,
     USE_LIGHTWEIGHT_MODEL,
-    PREDICT_ANGULAR_VELOCITY, CNN_INFERENCE_RATE
+    PREDICT_ANGULAR_VELOCITY, CNN_INFERENCE_RATE, LAPTOP_IP
 )
 from core.model import get_model
 

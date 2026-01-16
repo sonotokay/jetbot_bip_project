@@ -59,8 +59,8 @@ class SteeringDataset(Dataset):
             label = sample['steering']  # Steering angle
         
         # Augmentation
-        if self.augment:
-            image, label = self.augment_data(image, label)
+        #if self.augment:
+        #    image, label = self.augment_data(image, label)
         
         # To tensor
         image = torch.from_numpy(image).float().permute(2, 0, 1) / 255.0

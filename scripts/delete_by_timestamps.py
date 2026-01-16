@@ -112,16 +112,13 @@ if __name__ == '__main__':
     import sys
     
     # Dataset directory
-    data_dir = './data/challenge-merged'
+    data_dir = './data/training-kitchen-1L-cleaned'
     
     # Timestamp ranges to delete (HHMMSS format)
     # Based on your notes - deleting hand corrections only
     timestamp_ranges = [
-        ('155527', '155532'),  # Crash + adjustment
-        ('155634', '155641'),  # Similar crash
-        ('160430', '160437'),  # Hand correction
-        ('160536', '160545'),  # Hand correction  
-        ('160640', '160650'),  # End frames with hand correction
+        ('33264', '33100'),  # Crash + adjustment
+        ('34457', '34502'),  # Similar crash
     ]
     
     # NOT deleting: 155744-155748 (natural bump recovery - good data!)

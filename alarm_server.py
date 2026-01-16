@@ -3,6 +3,7 @@ import os
 import time
 import subprocess
 from threading import Lock
+from typing import Optional
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -20,8 +21,8 @@ _lock = Lock()
 
 class AlarmMsg(BaseModel):
     alarm: bool = True
-    reason: str | None = None
-    source: str | None = None
+    reason: Optional[str] = None
+    source: Optional[str] = None
 
 
 def play_alarm():
@@ -53,3 +54,7 @@ def alarm(msg: AlarmMsg):
 @app.get("/health")
 def health():
     return {"ok": True, "alarm_wav": ALARM_WAV, "cooldown_sec": COOLDOWN_SEC}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=9000)
