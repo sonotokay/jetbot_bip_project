@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.model import get_model, count_parameters
 from core.config import (
     DATA_DIR, MODEL_SAVE_PATH, BATCH_SIZE, LEARNING_RATE,
-    NUM_EPOCHS, VAL_SPLIT, IMAGE_WIDTH, IMAGE_HEIGHT,
+    NUM_EPOCHS, VAL_SPLIT, IMAGE_WIDTH, IMAGE_HEIGHT, USE_AUGMENTATION,
     PREDICT_ANGULAR_VELOCITY, USE_LIGHTWEIGHT_MODEL
 )
 
@@ -59,8 +59,8 @@ class SteeringDataset(Dataset):
             label = sample['steering']  # Steering angle
         
         # Augmentation
-        #if self.augment:
-        #    image, label = self.augment_data(image, label)
+        if self.augment:
+            image, label = self.augment_data(image, label)
         
         # To tensor
         image = torch.from_numpy(image).float().permute(2, 0, 1) / 255.0
@@ -159,7 +159,7 @@ def main():
     label_type = "angular velocity" if use_omega else "steering angle"
     print(f"Training to predict: {label_type}\n")
     
-    full_dataset = SteeringDataset(DATA_DIR, augment=True, use_omega=use_omega)
+    full_dataset = SteeringDataset(DATA_DIR, augment=USE_AUGMENTATION, use_omega=use_omega)
     val_size = int(VAL_SPLIT * len(full_dataset))
     train_size = len(full_dataset) - val_size
     

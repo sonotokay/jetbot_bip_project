@@ -3,14 +3,15 @@ data
 *.pth
 *.json
 .DS_Store
-#LATEX .gitignore
 
-latex-report/out/
-latex-report/technical-report.aux
-latex-report/technical-report.log
-latex-report/technical-report.out
-latex-report/technical-report.pdf
-latex-report/technical-report.synctex.gz
+# Kept locally, not part of the public repo
+latex-report/
+Presentation_Pitch/
+models/
+models-*/
+modelsRGBmerged100/
+*.mp4
+*.zip
 
 
 # Byte-compiled / optimized / DLL files

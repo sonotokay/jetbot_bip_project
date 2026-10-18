@@ -2,8 +2,11 @@
 """
 Delete frames by timestamp ranges
 Automatically finds frame indices and removes bad data
+
+Usage: python delete_by_timestamps.py <dataset_dir> -r START END [-r START END ...] [--yes]
 """
 
+import argparse
 import json
 import os
 from pathlib import Path
@@ -109,27 +112,24 @@ def delete_by_timestamps(data_dir, timestamp_ranges, dry_run=False):
     print(f"{'='*70}")
 
 if __name__ == '__main__':
-    import sys
+    parser = argparse.ArgumentParser(description="Delete frames by timestamp ranges")
+    parser.add_argument('data_dir', help="Dataset directory containing metadata.json")
+    parser.add_argument('-r', '--range', nargs=2, action='append', required=True,
+                        metavar=('START', 'END'), dest='ranges',
+                        help="Timestamp range to delete (HHMMSS, substring match); repeatable")
+    parser.add_argument('-y', '--yes', action='store_true', help="Skip confirmation prompt")
+    args = parser.parse_args()
     
-    # Dataset directory
-    data_dir = './data/training-kitchen-1L-cleaned'
+    data_dir = args.data_dir
+    timestamp_ranges = [tuple(r) for r in args.ranges]
     
-    # Timestamp ranges to delete (HHMMSS format)
-    # Based on your notes - deleting hand corrections only
-    timestamp_ranges = [
-        ('33264', '33100'),  # Crash + adjustment
-        ('34457', '34502'),  # Similar crash
-    ]
-    
-    # NOT deleting: 155744-155748 (natural bump recovery - good data!)
-    
-    print("Frames to DELETE (hand corrections):")
+    print("Frames to DELETE:")
     for start, end in timestamp_ranges:
         print(f"  {start} - {end}")
     
     # Ask for confirmation
     print(f"\n{'='*70}")
-    response = input("Proceed with deletion? (yes/no): ")
+    response = 'yes' if args.yes else input("Proceed with deletion? (yes/no): ")
     
     if response.lower() == 'yes':
         delete_by_timestamps(data_dir, timestamp_ranges, dry_run=False)

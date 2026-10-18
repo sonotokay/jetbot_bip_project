@@ -1,0 +1,8 @@
+# Laptop YOLO detection server (server.py)
+fastapi==0.128.0
+uvicorn==0.40.0
+python-multipart==0.0.21
+ultralytics
+opencv-python==4.12.0.88
+numpy==2.2.6
+requests==2.32.5

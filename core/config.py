@@ -1,5 +1,7 @@
 """ROS Config for the JetBot"""
 
+import os
+
 # ROS TOPICS
 # Input topics (subscribed)
 CAMERA_TOPIC = "/csi_cam_0/image_raw"
@@ -29,6 +31,7 @@ BATCH_SIZE = 32
 LEARNING_RATE = 0.001
 NUM_EPOCHS = 50
 VAL_SPLIT = 0.2
+USE_AUGMENTATION = False  # Flip/brightness/shadow; hurt results on our small datasets
 MODEL_SAVE_PATH = "./models/checkpoints"
 
 # ROBOT CONTROL
@@ -47,7 +50,7 @@ SPEED_MODERATE = 0.7
 SPEED_FULL = 1.0
 
 # CNN MODEL
-# Predict steering angle or angular velocity? We use only if we implement IMU
+# Predict angular velocity (IMU omega) instead of steering angle
 PREDICT_ANGULAR_VELOCITY = False  # Set True to use omega instead of steering
 
 # Model selection
@@ -56,11 +59,11 @@ USE_LIGHTWEIGHT_MODEL = False  # True to use the lighter model
 # ROS NODE RATES
 DATA_COLLECTION_RATE = 10  # Hz
 CNN_INFERENCE_RATE = 10    # Hz
-SAFETY_CHECK_RATE = 10     # Hz unused but keep for now
 MOTOR_CONTROL_RATE = 10    # Hz
 
 # LOGGING
 LOG_LEVEL = "INFO"  # DEBUG, INFO, WARN, ERROR
 
-LAPTOP_IP = "192.168.137.1" #TODO LAPTOP_IP
-JETSON_IP = "192.168.137.112" #TODO JETSON_IP
+# NETWORK (override with environment variables)
+LAPTOP_IP = os.environ.get("LAPTOP_IP", "192.168.137.1")    # YOLO detection server
+JETSON_IP = os.environ.get("JETSON_IP", "192.168.137.112")  # Robot

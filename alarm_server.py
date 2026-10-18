@@ -10,8 +10,9 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-# TODO Wave sound 
-ALARM_WAV = os.environ.get("ALARM_WAV", "/home/jetbot/alarm.wav")
+# Alarm sound, defaults to the one shipped in ressources/
+DEFAULT_WAV = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ressources", "alarm.wav")
+ALARM_WAV = os.environ.get("ALARM_WAV", DEFAULT_WAV)
 
 # Alarm cooldown in seconds
 COOLDOWN_SEC = float(os.environ.get("ALARM_COOLDOWN", "2.0"))
@@ -26,7 +27,7 @@ class AlarmMsg(BaseModel):
 
 
 def play_alarm():
-    """Spielt Alarmton ab (nicht-blockierend)."""
+    """Play the alarm sound (non-blocking)."""
     if not os.path.exists(ALARM_WAV):
         subprocess.Popen(["bash", "-lc", "printf '\\a'"])
         return

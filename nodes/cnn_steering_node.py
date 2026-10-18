@@ -14,6 +14,7 @@ import os
 import sys
 
 import requests
+import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,7 +27,6 @@ from core.model import get_model
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(PROJECT_ROOT, 'models', 'checkpoints', 'best_model.pth')
-DATA_PATH = os.path.join(PROJECT_ROOT, 'data')
 
 class CNNSteeringNode:
     """ROS node for CNN-based steering prediction"""
@@ -35,6 +35,7 @@ class CNNSteeringNode:
         self.laptop_url = f"http://{LAPTOP_IP}:8000/detect?conf=0.35"
         self.last_send = 0.0
         self.send_hz = 5.0 # Send every 0.2 seconds
+        self.sending = False
 
         rospy.init_node('cnn_steering', anonymous=True)
         
@@ -61,8 +62,6 @@ class CNNSteeringNode:
         self.ready = False
     
         rospy.loginfo("CNN node started, waiting for first image...")
-        
-        self.latest_image = None
         
         self.image_sub = rospy.Subscriber(
             CAMERA_TOPIC, Image, self.image_callback, queue_size=1
@@ -92,30 +91,37 @@ class CNNSteeringNode:
                 
             else:
                 rospy.logwarn_throttle(10, f"Unsupported encoding: {msg.encoding}")
+                return
 
+            # Forward frames to the laptop YOLO server without blocking the callback
             now = time.time()
-            if now - self.last_send < 1.0 / self.send_hz:
+            if self.sending or now - self.last_send < 1.0 / self.send_hz:
                 return
             self.last_send = now
+            self.sending = True
+            threading.Thread(
+                target=self.send_to_detector, args=(self.latest_image,), daemon=True
+            ).start()
 
-            img = self.latest_image
-            # img_small = cv2.resize(img, (0, 0), fx=0.5, fy=0.5)
+        except Exception as e:
+            rospy.logerr_throttle(10, f"Image callback error: {e}")
+    
+    def send_to_detector(self, img):
+        """Send one JPEG frame to the laptop YOLO server"""
+        try:
             ok, enc = cv2.imencode(".jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
             if not ok:
                 return
 
             files = {"file": ("frame.jpg", enc.tobytes(), "image/jpeg")}
-            try:
-                requests.post(self.laptop_url, files=files, timeout=0.5)
-            except requests.RequestException as e:
-                rospy.logwarn_throttle(2.0, f"YOLO request failed: {e}")
-
-
-        except Exception as e:
-            rospy.logerr_throttle(10, f"Image callback error: {e}")
+            requests.post(self.laptop_url, files=files, timeout=0.5)
+        except requests.RequestException as e:
+            rospy.logwarn_throttle(2.0, f"YOLO request failed: {e}")
+        finally:
+            self.sending = False
     
     def preprocess_image(self, cv_image):
-        """Preprocess image - MUST MATCH TRAINING EXACTLY"""
+        """Preprocess image - must match SteeringDataset in scripts/train.py"""
         # SAME ORDER AS TRAINING:
         # 1. BGR to RGB
         image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)

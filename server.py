@@ -1,20 +1,19 @@
 import os
 import requests
-# from core.config import (JETSON_IP)
-
-JETSON_ALARM_URL = os.environ.get("JETSON_ALARM_URL", "http://192.168.137.112:9000/alarm")  # TODO z.B. http://192.168.0.42:9000/alarm
-
 from fastapi import FastAPI, File, UploadFile
 import numpy as np
 import cv2
 from ultralytics import YOLO
+
+JETSON_IP = os.environ.get("JETSON_IP", "192.168.137.112")
+JETSON_ALARM_URL = os.environ.get("JETSON_ALARM_URL", f"http://{JETSON_IP}:9000/alarm")
 
 app = FastAPI()
 
 model = YOLO("yolov8n.pt")
 
 PERSON_CLASS_ID = 0  # COCO: 0 = person
-BOTTLE_CLASS_ID = 39  
+BOTTLE_CLASS_ID = 39  # COCO: 39 = bottle
 
 @app.post("/detect")
 async def detect(file: UploadFile = File(...), conf: float = 0.35):

@@ -11,6 +11,7 @@ from std_msgs.msg import Float32, Bool
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Imu
 import math
+import numpy as np
 import sys
 import os
 
@@ -92,6 +93,7 @@ class MotorFusionNode:
     def lidar_cmd_callback(self, msg):
         self.lidar_cmd_vel = msg
     
+    @staticmethod
     def euler_from_quaternion(quat):
         """Convert quaternion to euler angles (roll, pitch, yaw)"""
         x, y, z, w = quat
@@ -183,7 +185,6 @@ class MotorFusionNode:
 
 if __name__ == '__main__':
     try:
-        import numpy as np
         node = MotorFusionNode()
         node.run()
     except rospy.ROSInterruptException:

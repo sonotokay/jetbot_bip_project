@@ -10,7 +10,7 @@
   </include>  
 
   <!-- Custom scripts - use full paths -->
-  <env name="PYTHONPATH" value="$(env HOME)/jetbot_project:$(env/PYTHONPATH)" />
+  <env name="PYTHONPATH" value="$(env HOME)/jetbot_project:$(optenv PYTHONPATH)" />
   
   <node name="cnn_steering" pkg="jetbot_project" type="cnn_steering_node.py" 
         output="screen" required="true" />

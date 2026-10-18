@@ -1,0 +1,10 @@
+# Jetson Nano (robot). ROS 1 packages (rospy, sensor_msgs, ...) come from the ROS install.
+# Install PyTorch from NVIDIA's JetPack wheel, not from PyPI.
+torch
+numpy
+opencv-python
+requests
+fastapi
+uvicorn
+pydantic
+flask

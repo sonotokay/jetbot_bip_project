@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
+import argparse
 import subprocess
 import re
-import sys
-import os
 import signal
 
-# --- HARDCODED CONFIG (Based on your screenshots) ---
-PID = 10627          # The process ID of 'jetbot'
-FD  = "13"           # The File Descriptor for /dev/ttyACM0
-# ----------------------------------------------------
+PID = None  # Process ID of the jetbot driver (set via --pid)
+FD = "13"   # File descriptor of /dev/ttyACM0 (set via --fd)
 
 def spy():
     print(f"[*] Attaching to Process {PID} to spy on File Descriptor {FD}...")
@@ -17,7 +14,7 @@ def spy():
     print("-" * 50)
 
     # Command breakdown:
-    # -f            : Follow all threads (CRITICAL for Python apps)
+    # -f            : Follow all threads (needed for multi-threaded Python processes)
     # -p PID        : Attach to the process
     # -e trace=read : Only trace 'read' operations
     # -s 200        : Capture up to 200 characters of data
@@ -32,9 +29,6 @@ def spy():
             if not line:
                 break # Process died
             
-            # DEBUG: Uncomment the next line if you still see nothing
-            # print(f"DEBUG: {line.strip()}")
-
             # We are looking for: read(13, "some_data", ...)
             # The regex matches: read( followed by our FD, followed by comma
             if f"read({FD}," in line:
@@ -68,4 +62,10 @@ def spy():
         print(f"Error: {e}")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Read JetBot battery voltage via strace")
+    parser.add_argument('--pid', type=int, required=True, help="PID of the jetbot driver process")
+    parser.add_argument('--fd', default="13", help="File descriptor of /dev/ttyACM0 (default: 13)")
+    args = parser.parse_args()
+    
+    PID, FD = args.pid, args.fd
     spy()
